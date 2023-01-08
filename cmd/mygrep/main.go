@@ -42,7 +42,6 @@ func main() {
 
 func matchLine(line []byte, pattern string) (bool, error) {
 	switch {
-
 	// digits (\d)
 	case pattern == `\d`:
 		for _, char := range string(line) {
@@ -61,11 +60,23 @@ func matchLine(line []byte, pattern string) (bool, error) {
 		}
 		return false, nil
 
+	// negative charcter groups (e.g. [^abc])
+	case strings.HasPrefix(pattern, "[^") && strings.HasSuffix(pattern, "]"):
+		negative_chars := pattern[2 : len(pattern)-1]
+		for _, char := range negative_chars {
+			if bytes.ContainsAny(line, string(char)) {
+				return false, nil
+			}
+		}
+		return true, nil
+
 	// positive charcter groups (e.g. [abc])
 	case strings.HasPrefix(pattern, "[") && strings.HasSuffix(pattern, "]"):
 		positive_chars := pattern[1 : len(pattern)-1]
 		for _, char := range positive_chars {
-			return bytes.ContainsAny(line, string(char)), nil
+			if bytes.ContainsAny(line, string(char)) {
+				return true, nil
+			}
 		}
 		return false, nil
 
