@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -41,6 +42,8 @@ func main() {
 
 func matchLine(line []byte, pattern string) (bool, error) {
 	switch {
+
+	// digits (\d)
 	case pattern == `\d`:
 		for _, char := range string(line) {
 			if unicode.IsDigit(char) {
@@ -48,6 +51,8 @@ func matchLine(line []byte, pattern string) (bool, error) {
 			}
 		}
 		return false, nil
+
+	// alphanumerice characters (\w)
 	case pattern == `\w`:
 		for _, char := range string(line) {
 			if unicode.IsDigit(char) || unicode.IsLetter(char) {
@@ -55,6 +60,16 @@ func matchLine(line []byte, pattern string) (bool, error) {
 			}
 		}
 		return false, nil
+
+	// positive charcter groups (e.g. [abc])
+	case strings.HasPrefix(pattern, "[") && strings.HasSuffix(pattern, "]"):
+		positive_chars := pattern[1 : len(pattern)-1]
+		for _, char := range positive_chars {
+			return bytes.ContainsAny(line, string(char)), nil
+		}
+		return false, nil
+
+	// single character (e.g. a)
 	case utf8.RuneCountInString(pattern) == 1:
 		return bytes.ContainsAny(line, pattern), nil
 	}
