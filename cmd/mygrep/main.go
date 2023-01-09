@@ -103,6 +103,17 @@ func matchHere(line []byte, pattern string) (bool, error) {
 		}
 		return false, nil
 
+	// alternation (e.g. (cat|dog))
+	case strings.HasPrefix(pattern, "("):
+		end := strings.IndexByte(pattern, ')')
+		words := strings.Split(pattern[1:end], "|")
+		for _, word := range words {
+			if strings.HasPrefix(string(line), word) {
+				return matchHere(line[len(word):], pattern[end+1:])
+			}
+		}
+		return false, nil
+
 	// no regexp chars
 	case char == patternChar:
 		switch nextPatternChar {
