@@ -59,13 +59,12 @@ func matchHere(line []byte, pattern string) (bool, error) {
 		return true, nil
 	}
 
-	if len(line) == 0 {
-		return false, nil
-	}
-
 	char, size := utf8.DecodeRune(line)
 
 	switch {
+	case len(line) == 0:
+		return pattern == "$", nil
+
 	// digits (\d)
 	case strings.HasPrefix(pattern, `\d`):
 		if unicode.IsDigit(char) {
@@ -76,7 +75,6 @@ func matchHere(line []byte, pattern string) (bool, error) {
 	// alphanumerice characters (\w)
 	case strings.HasPrefix(pattern, `\w`):
 		if unicode.IsDigit(char) || unicode.IsLetter(char) {
-			// fmt.Printf("char: %v", char)
 			return matchHere(line[size:], pattern[2:])
 		}
 		return false, nil
