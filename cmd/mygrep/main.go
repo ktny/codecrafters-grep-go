@@ -38,6 +38,10 @@ func main() {
 }
 
 func matchLine(line []byte, pattern string) (bool, error) {
+	if strings.HasPrefix(pattern, "^") {
+		return matchHere(line, pattern[1:])
+	}
+
 	for i := range string(line) {
 		ok, err := matchHere(line[i:], pattern)
 		if err != nil {
