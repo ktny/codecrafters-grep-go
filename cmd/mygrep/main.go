@@ -67,6 +67,10 @@ func matchHere(line []byte, pattern string) (bool, error) {
 	case len(line) == 0:
 		return pattern == "$", nil
 
+	// wildcard (.)
+	case strings.HasPrefix(pattern, "."):
+		return matchHere(line[size:], pattern[1:])
+
 	// digits (\d)
 	case strings.HasPrefix(pattern, `\d`):
 		if unicode.IsDigit(char) {
