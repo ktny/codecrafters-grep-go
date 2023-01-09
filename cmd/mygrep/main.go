@@ -60,6 +60,8 @@ func matchHere(line []byte, pattern string) (bool, error) {
 	}
 
 	char, size := utf8.DecodeRune(line)
+	patternChar, patternCharSize := utf8.DecodeRuneInString(pattern)
+	nextPatternChar, _ := utf8.DecodeRuneInString(pattern[patternCharSize:])
 
 	switch {
 	case len(line) == 0:
@@ -99,11 +101,30 @@ func matchHere(line []byte, pattern string) (bool, error) {
 
 	// non regexp chars
 	default:
-		patternChar, patternCharSize := utf8.DecodeRuneInString(pattern)
 		if char == patternChar {
+			if nextPatternChar == '+' {
+				return matchNextPattern(line[size:], pattern[patternCharSize:], patternChar, isPatternChar)
+			}
 			return matchHere(line[size:], pattern[patternCharSize:])
 		}
 	}
 
 	return false, nil
+}
+
+func isPatternChar(char rune, patternChar rune) bool {
+	return char == patternChar
+}
+
+func matchNextPattern(line []byte, pattern string, patternChar rune, f func(char rune, patternChar rune) bool) (bool, error) {
+	totalSize := 0
+	for {
+		char, size := utf8.DecodeRune(line[totalSize:])
+		if f(char, patternChar) {
+			totalSize += size
+			continue
+		}
+		return matchHere(line[totalSize:], pattern[1:])
+	}
+
 }
