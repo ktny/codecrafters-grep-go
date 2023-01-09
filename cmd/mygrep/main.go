@@ -1,9 +1,6 @@
 package main
 
 import (
-	// Uncomment this to pass the first stage
-	// "bytes"
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -41,49 +38,70 @@ func main() {
 }
 
 func matchLine(line []byte, pattern string) (bool, error) {
+	for i := range string(line) {
+		ok, err := matchHere(line[i:], pattern)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func matchHere(line []byte, pattern string) (bool, error) {
+	if pattern == "" {
+		return true, nil
+	}
+
+	if len(line) == 0 {
+		return false, nil
+	}
+
+	char, size := utf8.DecodeRune(line)
+
 	switch {
 	// digits (\d)
-	case pattern == `\d`:
-		for _, char := range string(line) {
-			if unicode.IsDigit(char) {
-				return true, nil
-			}
+	case strings.HasPrefix(pattern, `\d`):
+		if unicode.IsDigit(char) {
+			return matchHere(line[size:], pattern[2:])
 		}
 		return false, nil
 
 	// alphanumerice characters (\w)
-	case pattern == `\w`:
-		for _, char := range string(line) {
-			if unicode.IsDigit(char) || unicode.IsLetter(char) {
-				return true, nil
-			}
+	case strings.HasPrefix(pattern, `\w`):
+		if unicode.IsDigit(char) || unicode.IsLetter(char) {
+			// fmt.Printf("char: %v", char)
+			return matchHere(line[size:], pattern[2:])
 		}
 		return false, nil
 
 	// negative charcter groups (e.g. [^abc])
-	case strings.HasPrefix(pattern, "[^") && strings.HasSuffix(pattern, "]"):
-		negative_chars := pattern[2 : len(pattern)-1]
-		for _, char := range negative_chars {
-			if bytes.ContainsAny(line, string(char)) {
-				return false, nil
-			}
-		}
-		return true, nil
-
-	// positive charcter groups (e.g. [abc])
-	case strings.HasPrefix(pattern, "[") && strings.HasSuffix(pattern, "]"):
-		positive_chars := pattern[1 : len(pattern)-1]
-		for _, char := range positive_chars {
-			if bytes.ContainsAny(line, string(char)) {
-				return true, nil
-			}
+	case strings.HasPrefix(pattern, "[^"):
+		end := strings.IndexByte(pattern, ']')
+		negative_chars := pattern[2:end]
+		if !strings.ContainsRune(negative_chars, char) {
+			return matchHere(line[size:], pattern[end+1:])
 		}
 		return false, nil
 
-	// single character (e.g. a)
-	case utf8.RuneCountInString(pattern) == 1:
-		return bytes.ContainsAny(line, pattern), nil
+	// positive charcter groups (e.g. [abc])
+	case strings.HasPrefix(pattern, "["):
+		end := strings.IndexByte(pattern, ']')
+		positive_chars := pattern[1:end]
+		if strings.ContainsRune(positive_chars, char) {
+			return matchHere(line[size:], pattern[end+1:])
+		}
+		return false, nil
+
+	// non regexp chars
+	default:
+		patternChar, patternCharSize := utf8.DecodeRuneInString(pattern)
+		if char == patternChar {
+			return matchHere(line[size:], pattern[patternCharSize:])
+		}
 	}
 
-	return false, fmt.Errorf("unsupported pattern: %q", pattern)
+	return false, nil
 }
