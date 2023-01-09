@@ -99,13 +99,21 @@ func matchHere(line []byte, pattern string) (bool, error) {
 		}
 		return false, nil
 
-	// non regexp chars
+	// no regexp chars
+	case char == patternChar:
+		switch nextPatternChar {
+		case '+':
+			return matchNextPattern(line[size:], pattern[patternCharSize:], patternChar, isPatternChar)
+		case '?':
+			return matchHere(line[size:], pattern[patternCharSize+1:])
+		}
+		return matchHere(line[size:], pattern[patternCharSize:])
+
+	// no match
 	default:
-		if char == patternChar {
-			if nextPatternChar == '+' {
-				return matchNextPattern(line[size:], pattern[patternCharSize:], patternChar, isPatternChar)
-			}
-			return matchHere(line[size:], pattern[patternCharSize:])
+		switch nextPatternChar {
+		case '?':
+			return matchHere(line, pattern[patternCharSize+1:])
 		}
 	}
 
@@ -126,5 +134,4 @@ func matchNextPattern(line []byte, pattern string, patternChar rune, f func(char
 		}
 		return matchHere(line[totalSize:], pattern[1:])
 	}
-
 }
